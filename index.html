@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<noscript>Your browser does not support JavaScript!</noscript>
+
+<head>
+    <title>Color Code</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="shortcut icon" href="./favicon.ico" />
+</head>
+
+<body>
+    <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()" placeholder="写点什么"></textarea>
+    <input type="color" id="firstcolor" onchange="changeColorFirst()">
+    <span>----</span>
+    <input type="color" id="lastcolor" onchange="applyColors()">
+    <span>选择Code格式：</span><select id="codeType" onchange="applyColors()">
+        <option value="[color=%%color]%%words[/color]" selected>[color=#FFFFFF]文字[/color]</option>
+        <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
+    </select>
+    <br>
+    <span>预览：</span><div id="preview" style="height: 100px; width: 100%; margin: 0 auto;"></div>
+    <span>代码：</span><textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto;" readonly></textarea>
+
+    <script>
+        var words = [];
+        var colors = [];
+
+        function color2RGB(colorText) { // #00FFAA
+            let rgb = [];
+            for (let i = 1; i < 7; i += 2) {
+                rgb.push(parseInt('0x' + colorText.substr(i, 2)));
+            }
+            return rgb;
+        }
+
+        function applyColors() {
+            words = [];
+            colors = [];
+            let texts = document.getElementById("codeinput").value;
+            let length = texts.length;
+            let firstcolor = document.getElementById("firstcolor").value;
+            let lastcolor = document.getElementById("lastcolor").value;
+            if (firstcolor === lastcolor || length <= 1) {
+                words.push(texts);
+                colors.push(firstcolor);
+            }
+            else {
+                words = texts.split("");
+                words.map((word, index) => {
+                    colors[index] = "#";
+                });
+                let firstRGB = color2RGB(firstcolor);
+                let lastRGB = color2RGB(lastcolor);
+                for (let i = 0; i < 3; i++) {
+                    let first = firstRGB[i];
+                    let last = lastRGB[i];
+                    let step = (last - first) / (length - 1);
+                    words.map((word, index) => {
+                        let c = parseInt(first + step * index).toString(16);
+                        if (c.length < 2) c = "0" + c;
+                        colors[index] += c;
+                    })
+                }
+            }
+            preview();
+            createCode();
+        }
+
+        function preview() {
+            let spans = [];
+            words.map((word, index) => {
+                if (word === " ") spans[index] = "<span> </span>";
+                else spans[index] = "<span style='color:" + colors[index] + ";'>" + word + "</span>";
+            });
+            document.getElementById("preview").innerHTML = spans.join("");
+        }
+
+        function createCode() {
+            let codeTypeEle = document.getElementById("codeType");
+            let codeType = codeTypeEle.options[codeTypeEle.selectedIndex].value;
+            let code = [];
+            words.map((word, index) => {
+                if (word === " ") code[index] = " ";
+                else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
+            });
+            document.getElementById("codeoutput").value = code.join("");
+        }
+
+        function changeColorFirst() {
+            let firstcolor = document.getElementById("firstcolor").value;
+            document.getElementById("lastcolor").value = firstcolor;
+            applyColors();
+        }
+
+        function test() {
+            document.getElementById("codeinput").value = "HELLO WORLD"
+            document.getElementById("firstcolor").value = "#ff00ff";
+            document.getElementById("lastcolor").value = "#00ffff";
+            applyColors();
+        }
+
+        test();
+    </script>
+
+</body>
+
+</html>
