@@ -57,7 +57,10 @@
                     let last = lastRGB[i];
                     let step = (last - first) / (length - 1);
                     words.map((word, index) => {
-                        let c = parseInt(first + step * index).toString(16);
+                        let cval = Math.round(first + step * index);
+                        if (cval > 255) cval = 255;
+                        if (cval < 0) cval = 0;
+                        let c = cval.toString(16);
                         if (c.length < 2) c = "0" + c;
                         colors[index] += c;
                     })
