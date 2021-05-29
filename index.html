@@ -10,28 +10,130 @@
 </head>
 
 <body>
-    <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()" placeholder="写点什么"></textarea>
+    <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()"
+        placeholder="写点什么"></textarea>
     <input type="color" id="firstcolor" onchange="changeColorFirst()">
     <span>----</span>
     <input type="color" id="lastcolor" onchange="applyColors()">
+    <span>渐变：</span><select id="colorType" onchange="applyColors()">
+        <option value="RGB">RGB</option>
+        <option value="HSV" selected>HSV</option>
+    </select>
     <span>选择Code格式：</span><select id="codeType" onchange="applyColors()">
         <option value="[color=%%color]%%words[/color]" selected>[color=#FFFFFF]文字[/color]</option>
         <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
     </select>
     <br>
-    <span>预览：</span><div id="preview" style="height: 100px; width: 100%; margin: 0 auto;"></div>
+    <span>预览：</span>
+    <div id="preview" style="height: 100px; width: 100%; margin: 0 auto;"></div>
     <span>代码：</span><textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto;" readonly></textarea>
 
     <script>
         var words = [];
         var colors = [];
 
-        function color2RGB(colorText) { // #00FFAA
+        function color2RGB(colorText) { // colorText = #00FFAA
             let rgb = [];
             for (let i = 1; i < 7; i += 2) {
                 rgb.push(parseInt('0x' + colorText.substr(i, 2)));
             }
             return rgb;
+        }
+
+        function color2HSV(colorText) { // colorText = #00FFAA
+            let [R, G, B] = color2RGB(colorText);
+            let [H, S, V] = [0, 0, 0];
+            let max = Math.max(R, G, B);
+            let min = Math.min(R, G, B);
+            V = max;
+            S = (max - min) / max;
+            if (R === max) H = (G - B) / (max - min) * 60;
+            if (G === max) H = 120 + (B - R) / (max - min) * 60;
+            if (B === max) H = 240 + (R - G) / (max - min) * 60;
+            if (H < 0) H = H + 360;
+            return [H, S, V];
+        }
+
+        function HSV2color([H, S, V]) {
+            let [R, G, B] = [0, 0, 0];
+            if (S === 0) R = G = B = V;
+            else {
+                H /= 60;
+                let i = Math.floor(H);
+                let f = H - i;
+                let a = V * (1 - S);
+                let b = V * (1 - S * f);
+                let c = V * (1 - S * (1 - f));
+                switch (i) {
+                    case 0: R = V; G = c; B = a; break;
+                    case 1: R = b; G = V; B = a; break;
+                    case 2: R = a; G = V; B = c; break;
+                    case 3: R = a; G = b; B = V; break;
+                    case 4: R = c; G = a; B = V; break;
+                    case 5: R = V; G = a; B = b; break;
+                    default: console.log("HSV2color Error");
+                }
+                R = Math.floor(R);
+                G = Math.floor(G);
+                B = Math.floor(B);
+                return [R, G, B];
+            }
+        }
+
+        function createColorsByRGB(firstcolor, lastcolor, length) {
+            let firstRGB = color2RGB(firstcolor);
+            let lastRGB = color2RGB(lastcolor);
+            let rgbColors = new Array(length).fill('#');
+            for (let i = 0; i < 3; i++) {
+                let first = firstRGB[i];
+                let last = lastRGB[i];
+                let step = (last - first) / (length - 1);
+                let index = 0;
+                while (index < length) {
+                    let cval = Math.round(first + step * index);
+                    if (cval > 255) cval = 255;
+                    if (cval < 0) cval = 0;
+                    let c = cval.toString(16);
+                    if (c.length < 2) c = "0" + c;
+                    rgbColors[index] += c;
+                    index += 1;
+                }
+            }
+            return rgbColors;
+        }
+
+        function createColorsByHSV(firstcolor, lastcolor, length) {
+            let firstHSV = color2HSV(firstcolor);
+            let lastHSV = color2HSV(lastcolor);
+            let hsvColors = new Array(length);
+            for (let c = 0; c < length; c++) {
+                hsvColors[c] = new Array(3);
+            }
+            let rgbColors = new Array(length);
+            for (let i = 0; i < 3; i++) {
+                let first = firstHSV[i];
+                let last = lastHSV[i];
+                let step = (last - first) / (length - 1);
+                let index = 0;
+                for (let c = 0; c < length; c++) {
+                    let cval = first + step * c;
+                    hsvColors[c][i] = cval;
+                }
+            }
+            for (let c = 0; c < length; c++) {
+                let rgbColor = HSV2color(hsvColors[c]);
+                let rgbColorString = [];
+                for (let i = 0; i < 3; i++) {
+                    let cval = rgbColor[i];
+                    if (cval > 255) cval = 255;
+                    if (cval < 0) cval = 0;
+                    let s = cval.toString(16);
+                    if (s.length < 2) s = "0" + s;
+                    rgbColorString += s;
+                }
+                rgbColors[c] = "#" + rgbColorString;
+            }
+            return rgbColors;
         }
 
         function applyColors() {
@@ -41,30 +143,18 @@
             let length = texts.length;
             let firstcolor = document.getElementById("firstcolor").value;
             let lastcolor = document.getElementById("lastcolor").value;
+            let colorType = document.getElementById("colorType").value;
             if (firstcolor === lastcolor || length <= 1) {
                 words.push(texts);
                 colors.push(firstcolor);
             }
             else {
                 words = texts.split("");
-                words.map((word, index) => {
-                    colors[index] = "#";
-                });
-                let firstRGB = color2RGB(firstcolor);
-                let lastRGB = color2RGB(lastcolor);
-                for (let i = 0; i < 3; i++) {
-                    let first = firstRGB[i];
-                    let last = lastRGB[i];
-                    let step = (last - first) / (length - 1);
-                    words.map((word, index) => {
-                        let cval = Math.round(first + step * index);
-                        if (cval > 255) cval = 255;
-                        if (cval < 0) cval = 0;
-                        let c = cval.toString(16);
-                        if (c.length < 2) c = "0" + c;
-                        colors[index] += c;
-                    })
-                }
+                length = words.length;
+                if (colorType === "HSV")
+                    colors = createColorsByHSV(firstcolor, lastcolor, length);
+                else
+                    colors = createColorsByRGB(firstcolor, lastcolor, length);
             }
             preview();
             createCode();
