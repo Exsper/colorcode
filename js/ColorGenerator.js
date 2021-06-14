@@ -182,10 +182,12 @@ class ColorGenerator {
         return arr;
     }
 
-    createColorsByRGB(colorLength = -1) {
+    createColorsByRGB(colorLength = -1, pickStart = 0) {
         this.colors = [];
         const length = this.words.length;
         if (colorLength <= 0) colorLength = length;
+        if (pickStart < 0) pickStart = 0;
+        if ((length + pickStart) > colorLength) pickStart = colorLength - length;
         const startR = this.startColor.rgb.r;
         const endR = this.endColor.rgb.r;
         const startG = this.startColor.rgb.g;
@@ -197,16 +199,19 @@ class ColorGenerator {
         const arrB = this.numSpliter(startB, endB, colorLength);
         let index = 0;
         while (index < length) {
-            let color = new Color([arrR[index], arrG[index], arrB[index]], true);
+            let pickIndex = index + pickStart;
+            let color = new Color([arrR[pickIndex], arrG[pickIndex], arrB[pickIndex]], true);
             this.colors.push(color.toString());
             index += 1;
         }
     }
 
-    createColorsByHSV(colorLength = -1) {
+    createColorsByHSV(colorLength = -1, pickStart = 0) {
         this.colors = [];
         const length = this.words.length;
         if (colorLength <= 0) colorLength = length;
+        if (pickStart < 0) pickStart = 0;
+        if ((length + pickStart) > colorLength) pickStart = colorLength - length;
         const startH = this.startColor.hsv.h;
         const endH = this.endColor.hsv.h;
         const startS = this.startColor.hsv.s;
@@ -218,7 +223,8 @@ class ColorGenerator {
         const arrV = this.numSpliter(startV, endV, colorLength);
         let index = 0;
         while (index < length) {
-            let color = new Color([arrH[index], arrS[index], arrV[index]], false);
+            let pickIndex = index + pickStart;
+            let color = new Color([arrH[pickIndex], arrS[pickIndex], arrV[pickIndex]], false);
             this.colors.push(color.toString());
             index += 1;
         }
@@ -227,16 +233,17 @@ class ColorGenerator {
     /**
      * @param {string} colorType RGB/HSV
      * @param {number} colorLength force length for multi line
+     * @param {number} pickStart not start from startcolor when multi line
      */
-    applyColors(colorType, colorLength = -1) {
+    applyColors(colorType, colorLength = -1, pickStart = 0) {
         if (this.startColor.toString() === this.endColor.toString()) {
             return { words: [this.line], colors: [this.startColor.toString()] };
         }
         if (colorType === "HSV") {
-            this.createColorsByHSV(colorLength);
+            this.createColorsByHSV(colorLength, pickStart);
         }
         else {
-            this.createColorsByRGB(colorLength);
+            this.createColorsByRGB(colorLength, pickStart);
         }
         return { words: this.words, colors: this.colors };
     }

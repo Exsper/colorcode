@@ -46,9 +46,9 @@
                 const lines = texts.split("\n");
                 const widths = lines.map((line) => line.length);
                 const maxlength = Math.max(...widths);
-                let results = lines.map((line) => {
+                let results = lines.map((line, index) => {
                     const cg = new ColorGenerator(line, firstcolor, lastcolor);
-                    return cg.applyColors(colorType, maxlength);
+                    return cg.applyColors(colorType, maxlength + lines.length, index);
                 })
                 let words = [];
                 let colors = [];
