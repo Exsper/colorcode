@@ -6,7 +6,7 @@
 <head>
     <title>Color Code</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="shortcut icon" href="./favicon.ico" />
+    <script type="text/javascript" src="./js/ColorGenerator.js"></script>
 </head>
 
 <body>
@@ -25,156 +25,63 @@
     </select>
     <br>
     <span>预览：</span>
-    <div id="preview" style="height: 100px; width: 100%; margin: 0 auto;"></div>
+    <div id="preview" style="height: auto; width: 100%; margin: 0 auto;"></div>
     <span>代码：</span><textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto;" readonly></textarea>
 
     <script>
-        var words = [];
-        var colors = [];
-
-        function color2RGB(colorText) { // colorText = #00FFAA
-            let rgb = [];
-            for (let i = 1; i < 7; i += 2) {
-                rgb.push(parseInt('0x' + colorText.substr(i, 2)));
-            }
-            return rgb;
-        }
-
-        function color2HSV(colorText) { // colorText = #00FFAA
-            let [R, G, B] = color2RGB(colorText);
-            let [H, S, V] = [0, 0, 0];
-            let max = Math.max(R, G, B);
-            let min = Math.min(R, G, B);
-            V = max;
-            S = (max - min) / max;
-            if (R === max) H = (G - B) / (max - min) * 60;
-            if (G === max) H = 120 + (B - R) / (max - min) * 60;
-            if (B === max) H = 240 + (R - G) / (max - min) * 60;
-            if (H < 0) H = H + 360;
-            return [H, S, V];
-        }
-
-        function HSV2color([H, S, V]) {
-            let [R, G, B] = [0, 0, 0];
-            if (S === 0) R = G = B = V;
-            else {
-                H /= 60;
-                let i = Math.floor(H);
-                let f = H - i;
-                let a = V * (1 - S);
-                let b = V * (1 - S * f);
-                let c = V * (1 - S * (1 - f));
-                switch (i) {
-                    case 0: R = V; G = c; B = a; break;
-                    case 1: R = b; G = V; B = a; break;
-                    case 2: R = a; G = V; B = c; break;
-                    case 3: R = a; G = b; B = V; break;
-                    case 4: R = c; G = a; B = V; break;
-                    case 5: R = V; G = a; B = b; break;
-                    default: console.log("HSV2color Error");
-                }
-                R = Math.floor(R);
-                G = Math.floor(G);
-                B = Math.floor(B);
-                return [R, G, B];
-            }
-        }
-
-        function createColorsByRGB(firstcolor, lastcolor, length) {
-            let firstRGB = color2RGB(firstcolor);
-            let lastRGB = color2RGB(lastcolor);
-            let rgbColors = new Array(length).fill('#');
-            for (let i = 0; i < 3; i++) {
-                let first = firstRGB[i];
-                let last = lastRGB[i];
-                let step = (last - first) / (length - 1);
-                let index = 0;
-                while (index < length) {
-                    let cval = Math.round(first + step * index);
-                    if (cval > 255) cval = 255;
-                    if (cval < 0) cval = 0;
-                    let c = cval.toString(16);
-                    if (c.length < 2) c = "0" + c;
-                    rgbColors[index] += c;
-                    index += 1;
-                }
-            }
-            return rgbColors;
-        }
-
-        function createColorsByHSV(firstcolor, lastcolor, length) {
-            let firstHSV = color2HSV(firstcolor);
-            let lastHSV = color2HSV(lastcolor);
-            let hsvColors = new Array(length);
-            for (let c = 0; c < length; c++) {
-                hsvColors[c] = new Array(3);
-            }
-            let rgbColors = new Array(length);
-            for (let i = 0; i < 3; i++) {
-                let first = firstHSV[i];
-                let last = lastHSV[i];
-                let step = (last - first) / (length - 1);
-                let index = 0;
-                for (let c = 0; c < length; c++) {
-                    let cval = first + step * c;
-                    hsvColors[c][i] = cval;
-                }
-            }
-            for (let c = 0; c < length; c++) {
-                let rgbColor = HSV2color(hsvColors[c]);
-                let rgbColorString = [];
-                for (let i = 0; i < 3; i++) {
-                    let cval = rgbColor[i];
-                    if (cval > 255) cval = 255;
-                    if (cval < 0) cval = 0;
-                    let s = cval.toString(16);
-                    if (s.length < 2) s = "0" + s;
-                    rgbColorString += s;
-                }
-                rgbColors[c] = "#" + rgbColorString;
-            }
-            return rgbColors;
-        }
-
         function applyColors() {
-            words = [];
-            colors = [];
-            let texts = document.getElementById("codeinput").value;
-            let length = texts.length;
-            let firstcolor = document.getElementById("firstcolor").value;
-            let lastcolor = document.getElementById("lastcolor").value;
-            let colorType = document.getElementById("colorType").value;
-            if (firstcolor === lastcolor || length <= 1) {
-                words.push(texts);
-                colors.push(firstcolor);
+            const texts = document.getElementById("codeinput").value.trim();
+            const firstcolor = new Color(document.getElementById("firstcolor").value);
+            const lastcolor = new Color(document.getElementById("lastcolor").value);
+            const colorType = document.getElementById("colorType").value;
+            if (texts.indexOf("\n") < 0) {
+                const cg = new ColorGenerator(texts, firstcolor, lastcolor);
+                const result = cg.applyColors(colorType);
+                preview(result.words, result.colors);
+                createCode(result.words, result.colors);
             }
             else {
-                words = texts.split("");
-                length = words.length;
-                if (colorType === "HSV")
-                    colors = createColorsByHSV(firstcolor, lastcolor, length);
-                else
-                    colors = createColorsByRGB(firstcolor, lastcolor, length);
+                // multi line
+                // find the longest line
+                const lines = texts.split("\n");
+                const widths = lines.map((line) => line.length);
+                const maxlength = Math.max(...widths);
+                let results = lines.map((line) => {
+                    const cg = new ColorGenerator(line, firstcolor, lastcolor);
+                    return cg.applyColors(colorType, maxlength);
+                })
+                let words = [];
+                let colors = [];
+                results.map((result) => {
+                    words.push(...result.words);
+                    colors.push(...result.colors);
+                    words.push("\n");
+                    colors.push("#FFFFFF");
+                });
+                preview(words, colors);
+                createCode(words, colors);
             }
-            preview();
-            createCode();
         }
 
-        function preview() {
+
+        function preview(words, colors) {
+
             let spans = [];
             words.map((word, index) => {
-                if (word === " ") spans[index] = "<span> </span>";
+                if (word === "\n") spans[index] = "<br>";
+                else if (word === " ") spans[index] = "<span> </span>";
                 else spans[index] = "<span style='color:" + colors[index] + ";'>" + word + "</span>";
             });
             document.getElementById("preview").innerHTML = spans.join("");
         }
 
-        function createCode() {
+        function createCode(words, colors) {
             let codeTypeEle = document.getElementById("codeType");
             let codeType = codeTypeEle.options[codeTypeEle.selectedIndex].value;
             let code = [];
             words.map((word, index) => {
-                if (word === " ") code[index] = " ";
+                if (word === "\n") code[index] = "\n";
+                else if (word === " ") code[index] = " ";
                 else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
             });
             document.getElementById("codeoutput").value = code.join("");
@@ -187,9 +94,9 @@
         }
 
         function test() {
-            document.getElementById("codeinput").value = "HELLO WORLD"
-            document.getElementById("firstcolor").value = "#ff00ff";
-            document.getElementById("lastcolor").value = "#00ffff";
+            document.getElementById("codeinput").value = "HELLO WORLD\nHAPPY EVERYDAY\nTO YOU"
+            document.getElementById("firstcolor").value = "#fe12ef";
+            document.getElementById("lastcolor").value = "#21feef";
             applyColors();
         }
 
