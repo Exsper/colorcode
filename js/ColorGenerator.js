@@ -36,7 +36,7 @@ class RGB {
      * @returns {[number,number,number]}
      */
     toHSV() {
-        let [R, G, B] = [this.r, this.g, this.b];
+        let [R, G, B] = [this.r / 255, this.g / 255, this.b / 255];
         let [H, S, V] = [0, 0, 0];
         let max = Math.max(R, G, B);
         let min = Math.min(R, G, B);
