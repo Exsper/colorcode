@@ -151,101 +151,112 @@ class Color {
 
 class ColorGenerator {
     /**
-     * @param {string} line 
+     * @param {Array<string>} words 
      * @param {Color} startColor 
      * @param {Color} endColor 
+     * @param {Array<{x:number, y:number}>} wordsLoc getBoundingClientRect
      */
-    constructor(line, startColor, endColor) {
-        this.line = line;
+    constructor(words, startColor, endColor, wordsLoc) {
+        this.words = words;
         this.startColor = startColor;
         this.endColor = endColor;
-        this.words = line.split("");
-        this.colors = [];
+        this.wordsLoc = wordsLoc;
+        this.initContentSize();
+    }
+
+    initContentSize() {
+        let xmin = this.wordsLoc[0].x;
+        let xmax = this.wordsLoc[0].x;
+        let ymin = this.wordsLoc[0].y;
+        let ymax = this.wordsLoc[0].y;
+        this.wordsLoc.map((point) => {
+            if (!point) return;
+            if (point.x > xmax) xmax = point.x;
+            if (point.x < xmin) xmin = point.x;
+            if (point.y > ymax) ymax = point.y;
+            if (point.y < ymin) ymin = point.y;
+        });
+        this.startLoc = { x: xmin, y: ymin };
+        this.endLoc = { x: xmax, y: ymax };
+        this.x1px2 = xmin - xmax;
+        this.x1ax2 = xmin + xmax;
+        this.y1py2 = ymin - ymax;
+        this.y1ay2 = ymin + ymax;
+        this.k = 2 * (this.x1px2 * this.x1px2 + this.y1py2 * this.y1py2);
+    }
+
+    /**
+     * 返回该点颜色渐变占总渐变的比值，0-1
+     * @param {number} x 
+     * @param {number} y 
+     * @returns {number}
+     */
+    calColorRatio(x, y) {
+        return ((this.x1ax2 - 2 * x) * this.x1px2 + (this.y1ay2 - 2 * y) * this.y1py2) / this.k + 0.5;
     }
 
     /**
      * @param {number} begin 
      * @param {number} end 
-     * @param {number} length 
-     * @returns {Array<number>}
+     * @param {number} ratio 0-1
+     * @returns {number}
      */
-    numSpliter(begin, end, length) {
-        let arr = [];
-        if (length <= 1) return [begin];
-        const step = (end - begin) / (length - 1);
-        let index = 0;
-        while (index < length) {
-            let cval = begin + step * index;
-            arr.push(cval);
-            index += 1;
-        }
-        return arr;
+    getInnerNum(begin, end, ratio) {
+        return begin + (end - begin) * ratio;
     }
 
-    createColorsByRGB(colorLength = -1, pickStart = 0) {
-        this.colors = [];
-        const length = this.words.length;
-        if (colorLength <= 0) colorLength = length;
-        if (pickStart < 0) pickStart = 0;
-        if ((length + pickStart) > colorLength) pickStart = colorLength - length;
+    createColorsByRGB() {
         const startR = this.startColor.rgb.r;
         const endR = this.endColor.rgb.r;
         const startG = this.startColor.rgb.g;
         const endG = this.endColor.rgb.g;
         const startB = this.startColor.rgb.b;
         const endB = this.endColor.rgb.b;
-        const arrR = this.numSpliter(startR, endR, colorLength);
-        const arrG = this.numSpliter(startG, endG, colorLength);
-        const arrB = this.numSpliter(startB, endB, colorLength);
-        let index = 0;
-        while (index < length) {
-            let pickIndex = index + pickStart;
-            let color = new Color([arrR[pickIndex], arrG[pickIndex], arrB[pickIndex]], true);
-            this.colors.push(color.toString());
-            index += 1;
-        }
+        const colors = this.words.map((word, index)=> {
+            if (word === "\n" || word === " ") return null;
+            let x = this.wordsLoc[index].x;
+            let y = this.wordsLoc[index].y;
+            let ratio = this.calColorRatio(x, y);
+            let r = this.getInnerNum(startR, endR, ratio);
+            let g = this.getInnerNum(startG, endG, ratio);
+            let b = this.getInnerNum(startB, endB, ratio);
+            let color = new Color([r, g, b], true);
+            return color.toString();
+        });
+        return colors;
     }
 
-    createColorsByHSV(colorLength = -1, pickStart = 0) {
-        this.colors = [];
-        const length = this.words.length;
-        if (colorLength <= 0) colorLength = length;
-        if (pickStart < 0) pickStart = 0;
-        if ((length + pickStart) > colorLength) pickStart = colorLength - length;
+    createColorsByHSV() {
         const startH = this.startColor.hsv.h;
         const endH = this.endColor.hsv.h;
         const startS = this.startColor.hsv.s;
         const endS = this.endColor.hsv.s;
         const startV = this.startColor.hsv.v;
         const endV = this.endColor.hsv.v;
-        const arrH = this.numSpliter(startH, endH, colorLength);
-        const arrS = this.numSpliter(startS, endS, colorLength);
-        const arrV = this.numSpliter(startV, endV, colorLength);
-        let index = 0;
-        while (index < length) {
-            let pickIndex = index + pickStart;
-            let color = new Color([arrH[pickIndex], arrS[pickIndex], arrV[pickIndex]], false);
-            this.colors.push(color.toString());
-            index += 1;
-        }
+        const colors = this.words.map((word, index)=> {
+            if (word === "\n" || word === " ") return null;
+            let x = this.wordsLoc[index].x;
+            let y = this.wordsLoc[index].y;
+            let ratio = this.calColorRatio(x, y);
+            let h = this.getInnerNum(startH, endH, ratio);
+            let s = this.getInnerNum(startS, endS, ratio);
+            let v = this.getInnerNum(startV, endV, ratio);
+            let color = new Color([h, s, v], false);
+            return color.toString();
+        });
+        return colors;
     }
 
     /**
      * @param {string} colorType RGB/HSV
-     * @param {number} colorLength force length for multi line
-     * @param {number} pickStart not start from startcolor when multi line
      */
-    applyColors(colorType, colorLength = -1, pickStart = 0) {
-        if (this.startColor.toString() === this.endColor.toString()) {
-            return { words: [this.line], colors: [this.startColor.toString()] };
-        }
+    applyColors(colorType) {
         if (colorType === "HSV") {
-            this.createColorsByHSV(colorLength, pickStart);
+            return this.createColorsByHSV();
         }
         else {
-            this.createColorsByRGB(colorLength, pickStart);
+            return this.createColorsByRGB();
         }
-        return { words: this.words, colors: this.colors };
     }
 }
 
