@@ -9,10 +9,29 @@
     <script type="text/javascript" src="./js/ColorGenerator.js"></script>
 </head>
 
+<style>
+    .pv {
+        height: auto;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .pvc {
+        height: auto;
+        width: 100%;
+        margin: 0 auto;
+        text-align: center;
+    }
+</style>
+
 <body>
+    <iframe style="float: right;"
+        src="https://ghbtns.com/github-btn.html?user=exsper&repo=colorcode&type=star&count=true"
+        frameborder="0" scrolling="0" width="170" height="20" title="GitHub"></iframe>
     <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()"
         placeholder="写点什么"></textarea>
     <br>
+    <span>选择颜色：</span>
     <input type="color" id="firstcolor" onchange="changeColorFirst()">
     <span>----</span>
     <input type="color" id="lastcolor" onchange="applyColors()">
@@ -20,17 +39,25 @@
         <option value="RGB">RGB</option>
         <option value="HSV" selected>HSV</option>
     </select>
-    <span>选择Code格式：</span><select id="codeType" onchange="applyColors()">
+    <span>Code格式：</span><select id="codeType" onchange="applyColors()">
         <option value="[color=%%color]%%words[/color]" selected>[color=#FFFFFF]文字[/color]</option>
         <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
     </select>
-    <span>style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;">
+    <input type="checkbox" id="centercheck" onchange="centerSwitch()"><span>居中</span>
+    <span>网页默认文本style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;">
     <br>
     <span>预览：</span>
-    <div id="preview" style="height: auto; width: 100%; margin: 0 auto;"></div>
+    <div id="preview" class="pv"></div>
     <span>代码：</span><textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto;" readonly></textarea>
 
     <script>
+        function centerSwitch() {
+            const isCenter = document.getElementById("centercheck").checked;
+            if (!isCenter) document.getElementById('preview').className = 'pv';
+            else document.getElementById('preview').className = 'pvc';
+            applyColors();
+        }
+
         function applyColors() {
             const texts = document.getElementById("codeinput").value.trim();
             const firstcolor = new Color(document.getElementById("firstcolor").value);
@@ -41,12 +68,12 @@
                 let index = 1;
                 let words4preview = [];
                 words4preview.push(words[0]);
-                while(index < words.length) {
+                while (index < words.length) {
                     words4preview.push("\n");
                     words4preview.push(words[index]);
                     index += 1;
                 }
-                const colors = words4preview.map((word) => firstcolor.toString() );
+                const colors = words4preview.map((word) => firstcolor.toString());
                 preview(words4preview, colors);
                 createCode(words4preview, colors);
                 return;
@@ -83,13 +110,14 @@
         function createCode(words, colors) {
             let codeTypeEle = document.getElementById("codeType");
             let codeType = codeTypeEle.options[codeTypeEle.selectedIndex].value;
+            let isCenter = document.getElementById("centercheck").checked;
             let code = [];
             words.map((word, index) => {
                 if (word === "\n") code[index] = "\n";
                 else if (word === " ") code[index] = " ";
                 else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
             });
-            document.getElementById("codeoutput").value = code.join("");
+            document.getElementById("codeoutput").value = (isCenter) ? "[centre]" + code.join("") + "[/centre]" : code.join("");
         }
 
         function changeColorFirst() {
