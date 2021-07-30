@@ -117,7 +117,8 @@
                 else if (word === " ") code[index] = " ";
                 else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
             });
-            document.getElementById("codeoutput").value = (isCenter) ? "[centre]" + code.join("") + "[/centre]" : code.join("");
+            let centerString = (codeTypeEle.selectedIndex == 0) ? "[centre]" : "<centre>";
+            document.getElementById("codeoutput").value = (isCenter) ? centerString + code.join("") + centerString : code.join("");
         }
 
         function changeColorFirst() {
