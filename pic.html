@@ -204,7 +204,8 @@
                 else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
             });
             let centerString = (codeTypeEle.selectedIndex == 0) ? "[centre]" : "<centre>";
-            document.getElementById("codeoutput").value = (isCenter) ? centerString + code.join("") + centerString : code.join("");
+            let centerEndString = (codeTypeEle.selectedIndex == 0) ? "[/centre]" : "</centre>";
+            document.getElementById("codeoutput").value = (isCenter) ? centerString + code.join("") + centerEndString : code.join("");
         }
 
         function test() {
