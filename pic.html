@@ -35,6 +35,7 @@
         <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
     </select>
     <input type="checkbox" id="centercheck" onchange="centerSwitch()"><span>居中</span>
+    <span>网页背景色：</span><input type="color" id="bgcolor" onchange="changeBGColor()">
     <span>网页默认文本style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;">
     <br>
     <span>预览：</span>
@@ -208,8 +209,15 @@
             document.getElementById("codeoutput").value = (isCenter) ? centerString + code.join("") + centerEndString : code.join("");
         }
 
+        function changeBGColor() {
+            let bgcolor = document.getElementById("bgcolor").value;
+            document.getElementById("preview").style.backgroundColor = bgcolor;
+        }
+
         function test() {
             document.getElementById("codeinput").value = "ABC\nDEF\nGHI";
+            document.getElementById("bgcolor").value = "#2a2226";
+            document.getElementById("preview").style.backgroundColor = "#2a2226";
         }
 
         test();

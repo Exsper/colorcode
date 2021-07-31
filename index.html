@@ -26,8 +26,8 @@
 
 <body>
     <iframe style="float: right;"
-        src="https://ghbtns.com/github-btn.html?user=exsper&repo=colorcode&type=star&count=true"
-        frameborder="0" scrolling="0" width="170" height="20" title="GitHub"></iframe>
+        src="https://ghbtns.com/github-btn.html?user=exsper&repo=colorcode&type=star&count=true" frameborder="0"
+        scrolling="0" width="170" height="20" title="GitHub"></iframe>
     <div style="float: right;"> <a href="pic.html">试试从图片读取颜色！</a> </div>
     <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()"
         placeholder="写点什么"></textarea>
@@ -45,6 +45,7 @@
         <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
     </select>
     <input type="checkbox" id="centercheck" onchange="centerSwitch()"><span>居中</span>
+    <span>网页背景色：</span><input type="color" id="bgcolor" onchange="changeBGColor()">
     <span>网页默认文本style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;">
     <br>
     <span>预览：</span>
@@ -129,11 +130,18 @@
             applyColors();
         }
 
+        function changeBGColor() {
+            let bgcolor = document.getElementById("bgcolor").value;
+            document.getElementById("preview").style.backgroundColor = bgcolor;
+        }
+
         function test() {
             document.getElementById("codeinput").value = "HELLO WORLD\nHAPPY EVERYDAY\nTO YOU"
             document.getElementById("firstcolor").value = "#fe12ef";
             document.getElementById("lastcolor").value = "#21feef";
             applyColors();
+            document.getElementById("bgcolor").value = "#2a2226";
+            document.getElementById("preview").style.backgroundColor = "#2a2226";
         }
 
         test();
