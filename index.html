@@ -6,21 +6,42 @@
 <head>
     <title>Color Code</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <script type="text/javascript" src="./js/ColorGenerator.js"></script>
+    <script type="text/javascript" src="./js/ColorCode.js"></script>
 </head>
 
 <style>
     .pv {
         height: auto;
-        width: 100%;
-        margin: 0 auto;
+        padding: 10px;
     }
 
     .pvc {
         height: auto;
-        width: 100%;
-        margin: 0 auto;
         text-align: center;
+        padding: 10px;
+    }
+
+    .selected {
+        background-color: lightblue;
+    }
+
+    .selectbg {
+        position: absolute;
+        display: block;
+        z-index: 999;
+    }
+
+    .mouseselectarea {
+        position: absolute;
+        width: 0;
+        height: 0;
+        margin: 0;
+        padding: 0;
+        border: 1px dashed #eee;
+        background-color: #aaa;
+        z-index: 1000;
+        opacity: 0.6;
+        display: none;
     }
 </style>
 
@@ -28,110 +49,328 @@
     <iframe style="float: right;"
         src="https://ghbtns.com/github-btn.html?user=exsper&repo=colorcode&type=star&count=true" frameborder="0"
         scrolling="0" width="170" height="20" title="GitHub"></iframe>
-    <div style="float: right;"> <a href="pic.html">试试从图片读取颜色！</a> </div>
-    <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto;" onchange="applyColors()"
+    <div style="float: right;"> <a href="index_old.html">回到旧版</a> </div>
+    <span>第1步：写入文字</span>
+    <br>
+    <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto; max-width: 1024px;" onchange="initPreview()"
         placeholder="写点什么"></textarea>
     <br>
+    <br>
+    <span>第2步：设置网页文本框格式（默认是osu个人主页）</span>
+    <br>
+    <span>文本框宽度：</span><input id="bgwidth" type="text" style="width: 40px;" value="880px" onchange="changeBG()">
+    <span>文本框背景色：</span><input type="color" id="bgcolor" onchange="changeBG()">
+    <span>默认字体色：</span><input type="color" id="defaultfontcolor" value="#FFFFFF" onchange="initPreview()">
+    <span>字体style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;"
+        onchange="initPreview()">
+    <input type="checkbox" id="centercheck" onchange="centerSwitch()"><span>文字居中</span>
+    <br>
+    <br>
+    <span>第3步：框选并设置颜色</span>
+    <br>
+    <span>预览：（这里是可以框选指定文字的！）</span>
+    <br>
+    <div id="preview" class="pv"></div>
+    <div id="selectbg" class="selectbg"></div>
+    <br>
+    <button id="selectallspans" onclick="selectSpanSwitch()">全选</button>
     <span>选择颜色：</span>
-    <input type="color" id="firstcolor" onchange="changeColorFirst()">
+    <input type="color" id="firstcolor">
     <span>----</span>
-    <input type="color" id="lastcolor" onchange="applyColors()">
-    <span>渐变：</span><select id="colorType" onchange="applyColors()">
+    <input type="color" id="lastcolor">
+    <button id="samecolor" onclick="lastSameColor()">同色</button>
+    <button id="changecolor" onclick="changeColors()">交换</button>
+    <span>渐变：</span><select id="colorType">
         <option value="RGB">RGB</option>
         <option value="HSV" selected>HSV</option>
     </select>
-    <span>Code格式：</span><select id="codeType" onchange="applyColors()">
+    <button id="applycolors" onclick="applyColors()">设置选中文字的颜色</button>
+    <br>
+    <span>导入图片中的颜色：</span><input type="file" id="fileInput">
+    <br>
+    <canvas id="canvas" width="100px" height="100px" hidden>
+        Canvas not supported
+    </canvas>
+    <button id="setcolorbypic" onclick="applyPicColors()">设置颜色</button>
+    <br>
+    <br>
+    <span>第4步：生成代码</span>
+    <br>
+    <span>Code格式：</span><select id="codeType" onchange="createCode()">
         <option value="[color=%%color]%%words[/color]" selected>[color=#FFFFFF]文字[/color]</option>
         <option value="<color=%%color>%%words</color>">&lt;color=#FFFFFF&gt;文字&lt;/color&gt;</option>
     </select>
-    <input type="checkbox" id="centercheck" onchange="centerSwitch()"><span>居中</span>
-    <span>网页背景色：</span><input type="color" id="bgcolor" onchange="changeBGColor()">
-    <span>网页默认文本style：</span><input id="fontstyle" type="text" value="font-size:14px;line-height:1.5;">
     <br>
-    <span>预览：</span>
-    <div id="preview" class="pv"></div>
-    <span>代码：</span><textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto;" readonly></textarea>
+    <span>代码：</span>
+    <br>
+    <textarea id="codeoutput" style="height: 100px; width: 100%; margin: 0 auto; max-width: 1024px;" readonly></textarea>
+    <br>
+    <button id="copybtn" onclick="copy()">复制到剪贴板</button>
 
     <script>
+        var global_words = [];
+        var wc;
+
+        // 鼠标框选-------------------------------------------------------------------------------------------
+        // 定时器id
+        var G_mouseStopId;
+        // 是否开启框选功能
+        var G_mouseOn = false;
+        // 用来存放鼠标点击初始位置
+        var G_startX = 0;
+        var G_startY = 0;
+        // 添加鼠标按下监听事件
+        document.getElementById("selectbg").onmousedown = function (e) {
+            // 阻止事件冒泡
+            clearEventBubble(e);
+            // 判断是否为鼠标左键被按下
+            if (e.buttons !== 1 || e.which !== 1) return;
+            let allpvspan = document.getElementsByClassName('pvspan');
+            for (let i = 0; i < allpvspan.length; i++) {
+                allpvspan[i].className = "pvspan";
+            }
+            G_mouseOn = true;
+            G_startX = e.clientX;
+            G_startY = e.clientY;
+            // 创建一个框选元素
+            var selDiv = document.createElement('div');
+            // 给框选元素添加css样式，这里使用绝对定位
+            selDiv.className = "mouseselectarea";
+            // 添加id
+            selDiv.id = 'selectDiv';
+            document.body.appendChild(selDiv);
+            // 根据起始位置，添加定位
+            selDiv.style.left = G_startX + 'px';
+            selDiv.style.top = G_startY + 'px';
+        };
+        // 添加鼠标移动事件监听
+        document.onmousemove = function (e) {
+            // 如果并非框选开启，退出
+            if (!G_mouseOn) return;
+            // 阻止事件冒泡
+            clearEventBubble(e);
+            // 获取当前坐标
+            var _x = e.clientX;
+            var _y = e.clientY;
+            // 根据坐标给选框修改样式
+            var selDiv = document.getElementById('selectDiv');
+            selDiv.style.display = 'block';
+            selDiv.style.left = Math.min(_x, G_startX) + 'px';
+            selDiv.style.top = Math.min(_y, G_startY) + 'px';
+            selDiv.style.width = Math.abs(_x - G_startX) + 'px';
+            selDiv.style.height = Math.abs(_y - G_startY) + 'px';
+        };
+        // 添加鼠标点击松开事件监听
+        document.onmouseup = function (e) {
+            if (!G_mouseOn) return;
+            // 阻止事件冒泡
+            clearEventBubble(e);
+            // 处理鼠标点击松开
+            var selDiv = document.getElementById('selectDiv');
+            var fileDivs = document.getElementsByClassName('pvspan');
+            var selectedEls = [];
+            // 获取参数
+            var l = selDiv.offsetLeft;
+            var t = selDiv.offsetTop;
+            var w = selDiv.offsetWidth;
+            var h = selDiv.offsetHeight;
+            for (var i = 0; i < fileDivs.length; i++) {
+                var sl = fileDivs[i].offsetWidth + fileDivs[i].offsetLeft;
+                var st = fileDivs[i].offsetHeight + fileDivs[i].offsetTop;
+                if (sl > l && st > t && fileDivs[i].offsetLeft < l + w && fileDivs[i].offsetTop < t + h) {
+                    // 该DOM元素被选中，进行处理
+                    selectedEls.push(fileDivs[i]);
+                }
+            }
+            for (let i = 0; i < selectedEls.length; i++) {
+                selectedEls[i].className = "pvspan selected";
+            }
+            // 恢复参数
+            selDiv.style.display = 'none';
+            G_mouseOn = false;
+        };
+        function clearEventBubble(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            else e.cancelBubble = true;
+            if (e.preventDefault) e.preventDefault();
+            else e.returnValue = false;
+        }
+        // ---------------------------------------------------------------------------------------------------
+
+        // 图片-----------------------------------------------------------------------------------------------
+        let canvas = document.getElementById('canvas');
+        let imageSetted = false;
+
+        let image = new Image();
+        image.crossOrigin = "Anonymous";
+        image.onload = function () {
+            applyPicColors();
+        }
+
+        let fileInput = document.querySelector('#fileInput');
+        fileInput.onchange = function () {
+            canvas.hidden = false;
+            var file = this.files[0];
+            var reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function () {
+                image.src = this.result;
+            };
+            imageSetted = true;
+        };
+
+        function getPixelColor(context, width, height, x, y) {
+            if (x >= width) x = width - 1;
+            if (y >= height) y = height - 1;
+            let imageData = context.getImageData(x, y, 1, 1);
+            let pixel = imageData.data;
+            let r = pixel[0];
+            let g = pixel[1];
+            let b = pixel[2];
+            let rHex = r.toString(16);
+            r < 16 && (rHex = "0" + rHex);
+            let gHex = g.toString(16);
+            g < 16 && (gHex = "0" + gHex);
+            let bHex = b.toString(16);
+            b < 16 && (bHex = "0" + bHex);
+            let hexColor = "#" + rHex + gHex + bHex;
+            return hexColor;
+        }
+
+        function applyPicColors() {
+            if (!wc) return;
+            let context = canvas.getContext('2d');
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            // 收集颜色
+            wc.words.map((word) => {
+                if (!word.isBr) word.color = new Color(getPixelColor(context, canvas.width, canvas.height, word.x, word.y));
+            });
+            let pvspans = document.getElementsByClassName('pvspan');
+            for (let i = 0; i < pvspans.length; i++) {
+                pvspans[i].style.color = wc.words.find((word) => word.spanId === pvspans[i].id).color;
+                pvspans[i].className = "pvspan";
+            }
+            document.getElementById("selectallspans").innerText = "全选";
+            createCode();
+        }
+        // ---------------------------------------------------------------------------------------------------
+
         function centerSwitch() {
             const isCenter = document.getElementById("centercheck").checked;
             if (!isCenter) document.getElementById('preview').className = 'pv';
             else document.getElementById('preview').className = 'pvc';
-            applyColors();
+            initPreview();
+        }
+
+        function initPreview() {
+            // 先生成一遍以便定位
+            const texts = document.getElementById("codeinput").value.trim();
+            if (!texts) return;
+            const defaultColor = new Color(document.getElementById("defaultfontcolor").value);
+            let fontstyle = document.getElementById("fontstyle").value;
+            let singleTexts = texts.split("");
+            let spans = [];
+            global_words = [];
+            let spIndex = 0;
+            singleTexts.map((text) => {
+                spIndex += 1;
+                let word = new Word(text, "sp-" + spIndex, defaultColor);
+                spans.push(word.toSpan(fontstyle));
+                global_words.push(word);
+            });
+            document.getElementById("preview").innerHTML = spans.join("");
+            // 覆盖蒙版
+            let preloc = document.getElementById("preview").getBoundingClientRect();
+            document.getElementById("selectbg").style = "width:" + preloc.width + "px;height:" + preloc.height + "px;top:" + preloc.top + "px;left:" + preloc.left;
+            // 收集坐标
+            global_words = global_words.map((word) => {
+                if (word.isBr) return word;
+                else return word.setLocs(document.getElementById(word.spanId).getBoundingClientRect());
+            });
+            wc = new WordCollection(global_words);
+            canvas.width = wc.picWidth;
+            canvas.height = wc.picHeight;
+            if (imageSetted) {
+                let context = canvas.getContext('2d');
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function selectSpanSwitch() {
+            if (document.getElementById("selectallspans").innerText === "全选") {
+                let pvspans = document.getElementsByClassName('pvspan');
+                for (let i = 0; i < pvspans.length; i++) {
+                    pvspans[i].className = "pvspan selected";
+                }
+                document.getElementById("selectallspans").innerText = "全不选";
+            }
+            else {
+                let pvspans = document.getElementsByClassName('pvspan');
+                for (let i = 0; i < pvspans.length; i++) {
+                    pvspans[i].className = "pvspan";
+                }
+                document.getElementById("selectallspans").innerText = "全选";
+            }
         }
 
         function applyColors() {
-            const texts = document.getElementById("codeinput").value.trim();
             const firstcolor = new Color(document.getElementById("firstcolor").value);
             const lastcolor = new Color(document.getElementById("lastcolor").value);
             const colorType = document.getElementById("colorType").value;
-            if (firstcolor.toString() === lastcolor.toString()) {
-                const words = texts.split("\n");
-                let index = 1;
-                let words4preview = [];
-                words4preview.push(words[0]);
-                while (index < words.length) {
-                    words4preview.push("\n");
-                    words4preview.push(words[index]);
-                    index += 1;
-                }
-                const colors = words4preview.map((word) => firstcolor.toString());
-                preview(words4preview, colors);
-                createCode(words4preview, colors);
-                return;
+            let selectedspans = document.getElementsByClassName('selected');
+            let selectedWords = [];
+            for (let i = 0; i < selectedspans.length; i++) {
+                let id = selectedspans[i].id;
+                selectedWords.push(global_words.find((gw) => gw.spanId === id));
             }
-            const words = texts.split("");
-            // 先生成一遍以定位
-            preview(words);
-            // 收集坐标
-            const wordsLoc = words.map((word, index) => {
-                if (word === "\n" || word === " ") return null;
-                else return document.getElementById("sp-" + index).getBoundingClientRect();
-            });
-            // 生成颜色
-            let cg = new ColorGenerator(words, firstcolor, lastcolor, wordsLoc);
-            let colors = cg.applyColors(colorType);
-            preview(words, colors);
-            createCode(words, colors);
+            if (selectedWords.length <= 0) {
+                selectedWords = wc.chooseAllWords();
+            }
+            let cg = new ColorGenerator(selectedWords, firstcolor, lastcolor);
+            wc.applyWords(cg.applyColors(colorType));
+            let pvspans = document.getElementsByClassName('pvspan');
+            for (let i = 0; i < pvspans.length; i++) {
+                pvspans[i].style.color = wc.words.find((word) => word.spanId === pvspans[i].id).color;
+                pvspans[i].className = "pvspan";
+            }
+            document.getElementById("selectallspans").innerText = "全选";
+            createCode();
         }
 
-        function preview(words, colors) {
-            let fontstyle = document.getElementById("fontstyle").value;
-            if (!colors) colors = words.map((word) => "#000000");
-            let spans = [];
-            words.map((word, index) => {
-                if (word === "\n") spans[index] = "<br>";
-                else if (word === " ") spans[index] = "<span> </span>";
-                else {
-                    spans[index] = "<span id='sp-" + index + "' style='color:" + colors[index] + ";" + fontstyle + "'>" + word + "</span>";
-                }
-            });
-            document.getElementById("preview").innerHTML = spans.join("");
-        }
-
-        function createCode(words, colors) {
+        function createCode() {
             let codeTypeEle = document.getElementById("codeType");
             let codeType = codeTypeEle.options[codeTypeEle.selectedIndex].value;
             let isCenter = document.getElementById("centercheck").checked;
-            let code = [];
-            words.map((word, index) => {
-                if (word === "\n") code[index] = "\n";
-                else if (word === " ") code[index] = " ";
-                else code[index] = codeType.replace("%%color", colors[index]).replace("%%words", word);
-            });
+            const defaultColor = new Color(document.getElementById("defaultfontcolor").value);
+            let code = wc.createCode(codeType, defaultColor);
             let centerString = (codeTypeEle.selectedIndex == 0) ? "[centre]" : "<centre>";
             let centerEndString = (codeTypeEle.selectedIndex == 0) ? "[/centre]" : "</centre>";
-            document.getElementById("codeoutput").value = (isCenter) ? centerString + code.join("") + centerEndString : code.join("");
+            document.getElementById("codeoutput").value = (isCenter) ? centerString + code + centerEndString : code;
         }
 
-        function changeColorFirst() {
+        function copy() {
+            document.getElementById("codeoutput").select();
+            document.execCommand("copy", false, null);
+        }
+
+        function lastSameColor() {
             let firstcolor = document.getElementById("firstcolor").value;
             document.getElementById("lastcolor").value = firstcolor;
-            applyColors();
         }
 
-        function changeBGColor() {
+        function changeColors() {
+            const firstcolor = document.getElementById("firstcolor").value;
+            const lastcolor = document.getElementById("lastcolor").value;
+            document.getElementById("lastcolor").value = firstcolor;
+            document.getElementById("firstcolor").value = lastcolor;
+        }
+
+        function changeBG() {
+            let bgwidth = document.getElementById("bgwidth").value;
             let bgcolor = document.getElementById("bgcolor").value;
+            document.getElementById("preview").style.width = bgwidth;
             document.getElementById("preview").style.backgroundColor = bgcolor;
         }
 
@@ -139,11 +378,12 @@
             document.getElementById("codeinput").value = "HELLO WORLD\nHAPPY EVERYDAY\nTO YOU"
             document.getElementById("firstcolor").value = "#fe12ef";
             document.getElementById("lastcolor").value = "#21feef";
+            document.getElementById("bgcolor").value = "#382e32";
+            document.getElementById("preview").style.backgroundColor = "#382e32";
+            changeBG();
+            initPreview();
             applyColors();
-            document.getElementById("bgcolor").value = "#2a2226";
-            document.getElementById("preview").style.backgroundColor = "#2a2226";
         }
-
         test();
     </script>
 
