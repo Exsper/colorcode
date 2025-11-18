@@ -193,11 +193,15 @@ class ColorGenerator {
      * @param {Array<Word>} words 
      * @param {Color} startColor 
      * @param {Color} endColor 
+     * @param {number} cycleCount 循环次数
+     * @param {string} cycleMode 循环模式: 'none' | 'repeat' | 'reflect'
      */
-    constructor(words, startColor, endColor) {
+    constructor(words, startColor, endColor, cycleCount = 1, cycleMode = 'none') {
         this.words = words;
         this.startColor = startColor;
         this.endColor = endColor;
+        this.cycleCount = cycleCount;
+        this.cycleMode = cycleMode;
         this.initContentSize();
     }
 
@@ -221,13 +225,47 @@ class ColorGenerator {
     }
 
     /**
+     * 处理循环和折返的比例变换
+     * @param {number} ratio 原始比例 0-1
+     * @returns {number} 变换后的比例 0-1
+     */
+    transformRatio(ratio) {
+        if (this.cycleMode === 'none' || this.cycleCount <= 1) {
+            return ratio;
+        }
+
+        const totalLength = this.cycleCount;
+        let transformedRatio = ratio * totalLength;
+        
+        if (this.cycleMode === 'repeat') {
+            // 重复模式：直接取小数部分
+            transformedRatio = transformedRatio % 1;
+        } else if (this.cycleMode === 'reflect') {
+            // 折返模式：锯齿波
+            const cycleIndex = Math.floor(transformedRatio);
+            const cycleRatio = transformedRatio % 1;
+            
+            if (cycleIndex % 2 === 0) {
+                // 偶数周期：正向
+                transformedRatio = cycleRatio;
+            } else {
+                // 奇数周期：反向
+                transformedRatio = 1 - cycleRatio;
+            }
+        }
+        
+        return transformedRatio;
+    }
+
+    /**
      * 返回该点颜色渐变占总渐变的比值，0-1
      * @param {number} x 
      * @param {number} y 
      * @returns {number}
      */
     calColorRatio(x, y) {
-        return ((this.x1ax2 - 2 * x) * this.x1px2 + (this.y1ay2 - 2 * y) * this.y1py2) / this.k + 0.5;
+        let ratio = ((this.x1ax2 - 2 * x) * this.x1px2 + (this.y1ay2 - 2 * y) * this.y1py2) / this.k + 0.5;
+        return this.transformRatio(ratio);
     }
 
     /**
@@ -292,7 +330,6 @@ class ColorGenerator {
         }
     }
 }
-
 
 class WordCollection{
     /**

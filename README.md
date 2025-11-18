@@ -7,5 +7,4 @@
 
 已实现从图片读颜色
 
-[颜色渐变](https://exsper.github.io/colorcode/)
-[从图片中读颜色](https://exsper.github.io/colorcode/pic)
+[网页](https://exsper.github.io/colorcode/)

@@ -49,7 +49,6 @@
     <iframe style="float: right;"
         src="https://ghbtns.com/github-btn.html?user=exsper&repo=colorcode&type=star&count=true" frameborder="0"
         scrolling="0" width="170" height="20" title="GitHub"></iframe>
-    <div style="float: right;"> <a href="index_old.html">回到旧版</a> </div>
     <span>第1步：写入文字</span>
     <br>
     <textarea id="codeinput" style="height: 100px; width: 100%; margin: 0 auto; max-width: 1024px;" onchange="initPreview()"
@@ -83,6 +82,13 @@
     <span>渐变：</span><select id="colorType">
         <option value="RGB">RGB</option>
         <option value="HSV" selected>HSV</option>
+    </select>
+    <span>循环次数：</span><input id="cycleCount" type="number" min="1" value="1" style="width: 40px;">
+    <span>循环模式：</span>
+    <select id="cycleMode">
+        <option value="none">无循环</option>
+        <option value="repeat">重复</option>
+        <option value="reflect">折返</option>
     </select>
     <button id="applycolors" onclick="applyColors()">设置选中文字的颜色</button>
     <br>
@@ -319,6 +325,9 @@
             const firstcolor = new Color(document.getElementById("firstcolor").value);
             const lastcolor = new Color(document.getElementById("lastcolor").value);
             const colorType = document.getElementById("colorType").value;
+            const cycleCount = parseInt(document.getElementById("cycleCount").value) || 1;
+            const cycleMode = document.getElementById("cycleMode").value;
+
             let selectedspans = document.getElementsByClassName('selected');
             let selectedWords = [];
             for (let i = 0; i < selectedspans.length; i++) {
@@ -328,7 +337,7 @@
             if (selectedWords.length <= 0) {
                 selectedWords = wc.chooseAllWords();
             }
-            let cg = new ColorGenerator(selectedWords, firstcolor, lastcolor);
+            let cg = new ColorGenerator(selectedWords, firstcolor, lastcolor, cycleCount, cycleMode);
             wc.applyWords(cg.applyColors(colorType));
             let pvspans = document.getElementsByClassName('pvspan');
             for (let i = 0; i < pvspans.length; i++) {
